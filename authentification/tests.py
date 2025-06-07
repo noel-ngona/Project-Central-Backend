@@ -72,10 +72,14 @@ class AuthenticationTests(APITestCase):
         self.assertIn('refresh', response.cookies)
         self.assertEqual('', response.cookies['refresh'].value)
         self.assertEqual(0, response.cookies['refresh']['max-age'])
+        # Try to use the refresh token - should fail
+        response = self.client.post(reverse('refresh'), HTTP_COOKIE=f'refresh={login_response.cookies["refresh"].value}')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # Verify we can't access protected endpoints anymore
         # me_response = self.client.get(self.me_url)
         # self.assertEqual(me_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
     def test_unauthorized_logout(self):
         """Test logout without authentication"""
