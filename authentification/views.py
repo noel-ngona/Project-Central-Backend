@@ -4,6 +4,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+import time
 
 
 class LoginView(APIView):
@@ -11,10 +12,15 @@ class LoginView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
+        time.sleep(3)  # Simulate a delay for demonstration purposes
         if user is not None:
             refresh = RefreshToken.for_user(user)
             response = Response({
                 'access': str(refresh.access_token),
+                'user' : {
+                    'username': user.username,
+                    'email': user.email,
+                }
             }, status=status.HTTP_200_OK)
             response.set_cookie('refresh', str(refresh), httponly=True)
             return response
