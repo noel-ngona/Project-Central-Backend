@@ -10,7 +10,9 @@ from django.conf import settings
 from django.template.loader import render_to_string
 import time
 import os
-
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str, force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 class LoginView(APIView):
     def post(self, request):
@@ -76,8 +78,11 @@ class RequestPasswordResetView(APIView):
             token_generator = PasswordResetTokenGenerator()
             reset_token = token_generator.make_token(user)
             
+           
+            email_b64 = urlsafe_base64_encode(force_bytes(email))
+            
             # In production, this should be your frontend URL
-            reset_url = f"{os.environ.get('FRONTEND_URL')}/reset-password/{user.id}/{reset_token}"
+            reset_url = f"{os.environ.get('FRONTEND_URL')}/change-password/{email_b64}/{reset_token}"
             
             # Send email with reset link using template
             html_message = render_to_string('emails/password_reset.html', {
@@ -107,20 +112,22 @@ class RequestPasswordResetView(APIView):
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
     
-    def post(self, request):
-        user_id = request.data.get('user_id')
+    def post(self, request):    
+        email_b64 = request.data.get('email_b64')
         token = request.data.get('token')
         new_password = request.data.get('new_password')
         
-        if not all([user_id, token, new_password]):
+        if not all([email_b64, token, new_password]):
             return Response(
                 {'error': 'Missing required fields'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         try:
+            # Decode the base64 email
+            email = force_str(urlsafe_base64_decode(email_b64))
             User = get_user_model()
-            user = User.objects.get(id=user_id)
+            user = User.objects.get(email=email)
             token_generator = PasswordResetTokenGenerator()
             
             if token_generator.check_token(user, token):
@@ -136,9 +143,9 @@ class ResetPasswordView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
                 
-        except User.DoesNotExist:
+        except (TypeError, ValueError, User.DoesNotExist):
             return Response(
-                {'error': 'Invalid user'},
+                {'error': 'Invalid reset link'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
