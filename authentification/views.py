@@ -82,7 +82,7 @@ class RequestPasswordResetView(APIView):
             email_b64 = urlsafe_base64_encode(force_bytes(email))
             
             # In production, this should be your frontend URL
-            reset_url = f"{os.environ.get('FRONTEND_URL')}/change-password/{email_b64}/{reset_token}"
+            reset_url = f"{os.environ.get('FRONTEND_URL')}/reset-password/{email_b64}/{reset_token}"
             
             # Send email with reset link using template
             html_message = render_to_string('emails/password_reset.html', {
